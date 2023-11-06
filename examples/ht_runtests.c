@@ -4,6 +4,8 @@
 #include <time.h>
 #include "bf.h"
 #include "hash_file.h"
+#include "acutest.h"
+
 
 #define RECORDS_NUM 1000 // you can change it if you want
 #define GLOBAL_DEPT 2 // you can change it if you want
@@ -61,38 +63,42 @@ const char* cities[] = {
     }                         \
   }
 
-int main() {
-  BF_Init(LRU);
+void test_create(void) {
   
-  CALL_OR_DIE(HT_Init());
-
-  int indexDesc;
-  CALL_OR_DIE(HT_CreateIndex(FILE_NAME, GLOBAL_DEPT));
-  CALL_OR_DIE(HT_OpenIndex(FILE_NAME, &indexDesc)); 
-
-  Record record;
-  srand(12569874);
-  int r;
-  printf("Insert Entries\n");
-  for (int id = 0; id < RECORDS_NUM; ++id) {
-    // create a record
-    record.id = id;
-    r = rand() % 12;
-    memcpy(record.name, names[r], strlen(names[r]) + 1);
-    r = rand() % 12;
-    memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
-    r = rand() % 10;
-    memcpy(record.city, cities[r], strlen(cities[r]) + 1);
-
-    CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
-  }
-
-  printf("RUN PrintAllEntries\n");
-  int id = rand() % RECORDS_NUM;
-  CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
-  //CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
-
-
-  CALL_OR_DIE(HT_CloseFile(indexDesc));
-  BF_Close();
 }
+
+void test_init(void) {
+  
+}
+
+
+void test_open(void) {
+  
+}
+
+void test_close(void) {
+  
+}
+
+void test_insert(void) {
+  
+}
+
+void test_printentries(void) {
+  
+}
+
+void test_hashstatistics(void) {
+  
+}
+
+TEST_LIST = {
+   { "create", test_create },
+   { "init", test_init },
+   { "open", test_open },
+   { "close", test_close },
+   { "insert", test_insert },
+   { "printEntries", test_printentries },
+   { "hashStatistics", test_hashstatistics },
+   { NULL, NULL }     /* zeroed record marking the end of the list */
+};
