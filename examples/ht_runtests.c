@@ -64,13 +64,8 @@ const char* cities[] = {
   }
 
 void test_create(void) {
-  
+    
 }
-
-void test_init(void) {
-  
-}
-
 
 void test_open(void) {
   
@@ -94,7 +89,6 @@ void test_hashstatistics(void) {
 
 TEST_LIST = {
    { "create", test_create },
-   { "init", test_init },
    { "open", test_open },
    { "close", test_close },
    { "insert", test_insert },

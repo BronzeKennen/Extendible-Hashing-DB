@@ -1,6 +1,8 @@
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
 
+HT_table_file_entry *table;
+
 typedef enum HT_ErrorCode {
   HT_OK,
   HT_ERROR
@@ -12,6 +14,31 @@ typedef struct Record {
 	char surname[20];
 	char city[20];
 } Record;
+
+
+typedef struct ht_info {
+	
+	int numOfBuckets; //note: This is num of blocks. Not last block id. Last block id is num_of_blocks - 1
+	int totalRecords;
+	int minRecordsPerBucket;
+	int maxRecordsPerBucket;
+	int globalDepth;
+
+} HT_info;
+
+typedef struct ht_block_info {
+
+	int localDepth;
+	int numOfRecords;
+
+} HT_block_info;
+
+typedef struct table_file_entry {
+
+	int fileDesc;
+	HT_info infoBlock;
+
+} HT_table_file_entry;
 
 /*
  * Η συνάρτηση HT_Init χρησιμοποιείται για την αρχικοποίηση κάποιον δομών που μπορεί να χρειαστείτε. 
