@@ -36,7 +36,7 @@ typedef struct ht_block_info {
 typedef struct table_file_entry {
 
 	int fileDesc;
-	HT_info infoBlock;
+	HT_info* infoBlock;
 
 } HT_table_file_entry;
 
