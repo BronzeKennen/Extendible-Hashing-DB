@@ -77,11 +77,10 @@ void test_open(void) {
     int fileDesc;
     HT_OpenIndex("create.db", &fileDesc);
 
-
 }
 
 void test_close(void) {
-  
+    
 }
 
 void test_insert(void) {

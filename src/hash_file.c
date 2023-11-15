@@ -57,7 +57,8 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     BF_Block *block;
     BF_Block_Init(&block);
     CALL_BF(BF_GetBlock(fileDesc, 1, block));
-    HT_info* info = BF_Block_GetData(block);
+    void* Pointer = BF_Block_GetData(block);
+    HT_info* info = (HT_info*)Pointer;
     table[openFileCounter].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
     *indexDesc = openFileCounter;
     openFileCounter++;
