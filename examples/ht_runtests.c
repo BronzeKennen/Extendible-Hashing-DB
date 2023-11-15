@@ -66,25 +66,29 @@ const char* cities[] = {
 void test_create(void) {
     TEST_ASSERT(HT_Init() == HT_OK);
 
-    TEST_ASSERT(HT_CreateIndex("create.db", 4) == HT_OK); //Should work
-    TEST_ASSERT(HT_CreateIndex("create.db", 8) != HT_OK); //Should not work, file already exists
+    TEST_ASSERT(HT_CreateIndex("test1.db", 4) == HT_OK); //Should work
+    TEST_ASSERT(HT_CreateIndex("test1.db", 8) != HT_OK); //Should not work, file already exists
 
 }
+int indexDesc1;
 
 void test_open(void) {
 
     HT_Init();
-    int fileDesc;
-    HT_OpenIndex("create.db", &fileDesc);
+    TEST_ASSERT(HT_OpenIndex("test1.db", &indexDesc1) == HT_OK);
+
+    TEST_ASSERT(indexDesc1 == 0);
 
 }
 
 void test_close(void) {
+    HT_Init();
+    TEST_ASSERT(HT_OpenIndex("test1.db", &indexDesc1) == HT_OK);
+    TEST_ASSERT(HT_CloseFile(indexDesc1) == HT_OK);
     
 }
 
-void test_insert(void) {
-  
+void test_insert(void) {  
 }
 
 void test_printentries(void) {

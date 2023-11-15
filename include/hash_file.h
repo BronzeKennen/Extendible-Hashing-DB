@@ -14,6 +14,10 @@ typedef struct Record {
 	char city[20];
 } Record;
 
+typedef enum Type {
+	HASH,
+	HEAP
+} Type;
 
 typedef struct ht_info {
 	
@@ -22,6 +26,7 @@ typedef struct ht_info {
 	int minRecordsPerBucket;
 	int maxRecordsPerBucket;
 	int globalDepth;
+	Type type;
 
 } HT_info;
 
@@ -92,6 +97,11 @@ HT_ErrorCode HT_InsertEntry(
 HT_ErrorCode HT_PrintAllEntries(
 	int indexDesc,	/* θέση στον πίνακα με τα ανοιχτά αρχεία */
 	int *id 				/* τιμή του πεδίου κλειδιού προς αναζήτηση */
+	);
+
+int hash_Function(
+	int id,
+	int depth
 	);
 
 
