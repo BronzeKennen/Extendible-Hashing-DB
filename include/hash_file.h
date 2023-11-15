@@ -1,7 +1,6 @@
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
 
-HT_table_file_entry *table;
 
 typedef enum HT_ErrorCode {
   HT_OK,

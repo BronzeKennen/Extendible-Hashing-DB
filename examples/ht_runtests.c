@@ -64,11 +64,20 @@ const char* cities[] = {
   }
 
 void test_create(void) {
-    
+    TEST_ASSERT(HT_Init() == HT_OK);
+
+    TEST_ASSERT(HT_CreateIndex("create.db", 4) == HT_OK); //Should work
+    TEST_ASSERT(HT_CreateIndex("create.db", 8) != HT_OK); //Should not work, file already exists
+
 }
 
 void test_open(void) {
-  
+
+    HT_Init();
+    int fileDesc;
+    HT_OpenIndex("create.db", &fileDesc);
+
+
 }
 
 void test_close(void) {
