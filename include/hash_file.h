@@ -100,9 +100,11 @@ HT_ErrorCode HT_PrintAllEntries(
 	);
 
 int hash_Function(
-	int id,
-	int depth
+	int num,
+	int globalDepth
 	);
 
+
+HT_info *getInfo(int indexDesc); 
 
 #endif // HASH_FILE_H

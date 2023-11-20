@@ -57,19 +57,13 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 
 HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     int fileDesc;
-    BF_Block *block;
+    *indexDesc = openFileCounter;
     BF_OpenFile(fileName,&fileDesc);
-    table[openFileCounter].fileDesc = fileDesc;
-    BF_Block_Init(&block);
-    CALL_BF(BF_GetBlock(fileDesc, 0, block));
-    void* Pointer = BF_Block_GetData(block);
-    HT_info* info = (HT_info*)Pointer;
+    HT_info *info = getInfo(*indexDesc);
     table[openFileCounter].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
 
-    *indexDesc = openFileCounter;
     openFileCounter++;
 
-    BF_Block_Destroy(&block);
     return HT_OK;
 }
 
@@ -92,8 +86,23 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 }
 
 HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
-    //insert code here
-    return HT_OK;
+    
+    HT_info *info = getInfo(indexDesc);
+    
+    int *hashTable;
+    int depth = 2;
+    
+    depth << info->globalDepth;
+    if(info->totalRecords == 0)  { //Init table
+        hashTable = malloc(sizeof(int) * depth);
+    }
+
+    int hashNum = hash_Function(record.id, depth);
+    if(!hashTable[hashNum]) {
+        //create bucket
+    } else {
+
+    }
 }
 
 HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
@@ -101,6 +110,41 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
     return HT_OK;
 }
 
-int hash_Function(int id, int depth) {
-
+int hash_Function(int num, int globalDepth) {
+    int hashValue = num; //will add actual hash function here
+    return hashValue >> sizeof(int) - globalDepth;
 }
+
+HT_info *getInfo(int indexDesc) {
+    BF_Block *block;
+
+    int fileDesc = table[indexDesc].fileDesc;
+
+    BF_Block_Init(&block);
+    BF_GetBlock(fileDesc, 0, block);
+
+    void* Pointer = BF_Block_GetData(block);
+
+    HT_info* info = (HT_info*)Pointer;
+    BF_Block_Destroy(&block);
+
+    return info;
+}
+
+// depth 3
+
+// [0, 1,  2,   3,  4,  5  ,6,  7]
+// 000 001 010 011 100 101 110 111
+
+// for(i ... i < globalDepth)
+//     shiftright
+//     add to var -> go to bucket of choice
+
+// if(!bucket)
+//     createbucket.....
+// else
+//     xwraei?!?!?
+//     if not:
+//         localdepth < global???
+//         split...:
+            
