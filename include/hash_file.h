@@ -27,6 +27,7 @@ typedef struct ht_info {
 	int maxRecordsPerBucket;
 	int globalDepth;
 	Type type;
+	BF_Block **hashTable;
 
 } HT_info;
 

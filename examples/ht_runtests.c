@@ -89,7 +89,37 @@ void test_close(void) {
 }
 
 void test_insert(void) {  
+    HT_Init();
+    int indexDesc;
+    HT_OpenIndex("test1.db",&indexDesc);
     
+    Record record;
+    BF_Block *block;
+    
+    BF_Block_Init(&block);
+    srand(12569874);
+    int r;
+    printf("Insert Entries\n");
+
+    //Create a random record
+    record.id = 1;
+    r = rand() % 12;
+    memcpy(record.name, names[r], strlen(names[r]) + 1);
+    r = rand() % 12;
+    memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+    r = rand() % 10;
+    memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+
+    //Try to insert an entry
+    HT_InsertEntry(indexDesc,record);
+    HT_info *info = getInfo(indexDesc);
+    TEST_ASSERT(info->totalRecords == 1);
+    
+    //Try to get the supposed block we placed the entry
+    BF_GetBlock(indexDesc,1,block);
+    void* data = BF_Block_GetData(block);
+    Record *rec = data;
+    TEST_ASSERT(rec->id == 1); //Id should be equal to 1
 }
 
 void test_printentries(void) {

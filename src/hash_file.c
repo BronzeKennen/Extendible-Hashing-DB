@@ -14,6 +14,10 @@
     return BF_ERROR;        \
   }                         \
 }
+
+#define RECORDS_PER_BLOCK (BF_BLOCK_SIZE - sizeof(HT_block_info)) / sizeof(Record)
+
+
 HT_table_file_entry *table;
 int openFileCounter;
  
@@ -89,17 +93,43 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     
     HT_info *info = getInfo(indexDesc);
     
-    int *hashTable;
-    int depth = 2;
-    
-    depth << info->globalDepth;
+    BF_Block **hashTable; //A hash table consists of pointers to blocks therefore double pointer
+
+    int depth = 1;
+    depth << info->globalDepth; //memory allocated grows exponentially based on global depth
+
     if(info->totalRecords == 0)  { //Init table
-        hashTable = malloc(sizeof(int) * depth);
+        hashTable = malloc(sizeof(BF_Block*) * depth);
+        info->hashTable = hashTable;
+    } else { //if table already exists
+        hashTable = info->hashTable;
     }
 
-    int hashNum = hash_Function(record.id, depth);
-    if(!hashTable[hashNum]) {
-        //create bucket
+    
+    BF_Block *block;
+
+
+    int hashNum = hash_Function(record.id, info->globalDepth);
+    if(!hashTable[hashNum]) { //is there a bucket where entry hashed?
+        BF_Block_Init(&block);
+        BF_AllocateBlock(table[indexDesc].fileDesc,block);
+
+        hashTable[hashNum] = block;
+
+        void* data = BF_Block_GetData(block);
+        Record *rec = data;
+        rec[0] = record; //This is going to be the first entry in the new bucket [OBVIOUSLY]
+        info->totalRecords++;
+
+        BF_Block_SetDirty(block);
+        BF_UnpinBlock(block);
+
+        BF_GetBlock(table[indexDesc].fileDesc, 0, block); //Update ht_info
+        data = BF_Block_GetData(block);
+        data = info;
+        BF_Block_SetDirty(block);
+        BF_UnpinBlock(block);
+    
     } else {
 
     }
@@ -112,6 +142,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 
 int hash_Function(int num, int globalDepth) {
     int hashValue = num; //will add actual hash function here
+    printf("Hashed at value %d",(hashValue >> sizeof(int) - globalDepth));
     return hashValue >> sizeof(int) - globalDepth;
 }
 
