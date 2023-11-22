@@ -105,33 +105,57 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         hashTable = info->hashTable;
     }
 
-    
     BF_Block *block;
 
 
     int hashNum = hash_Function(record.id, info->globalDepth);
+    BF_Block_Init(&block);
     if(!hashTable[hashNum]) { //is there a bucket where entry hashed?
-        BF_Block_Init(&block);
         BF_AllocateBlock(table[indexDesc].fileDesc,block);
 
         hashTable[hashNum] = block;
-
-        void* data = BF_Block_GetData(block);
-        Record *rec = data;
+        HT_block_info *data = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
+        data->localDepth =1;
+        Record *rec = (Record*)data;
         rec[0] = record; //This is going to be the first entry in the new bucket [OBVIOUSLY]
+        data->numOfRecords = 1; //auksanoume records profanws
+        data++;
         info->totalRecords++;
 
+        int bucketPointer = depth/2; 
+        if(depth / 2 > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
+            bucketPointer = 1;
+
+        for(int i = bucketPointer - 1; i < (depth >> data->localDepth) - 1; i++) { //create buddies, in localdepth 1 is half the table
+            hashTable[i] = block;
+        }
+
         BF_Block_SetDirty(block);
-        BF_UnpinBlock(block);
+        BF_UnpinBlock(block); //e nai
 
         BF_GetBlock(table[indexDesc].fileDesc, 0, block); //Update ht_info
-        data = BF_Block_GetData(block);
-        data = info;
+        void* voidData = BF_Block_GetData(block);
+        voidData = info;
         BF_Block_SetDirty(block);
         BF_UnpinBlock(block);
     
     } else {
+        HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
+        if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
+            //insert entry
+            blockInfo++;
+            Record *recData = (Record*)blockInfo;
+            recData[blockInfo->numOfRecords - 1] = record;
+            
+        } else { //an apo tin alli einai gemato to bucket kavlaki
+            if(blockInfo->localDepth < info->globalDepth) {
+                //an prepei na spasei ena bucket se mikrotera tha prepei na afksithei to local depth
+                // -> ara allazoun ta filarakia -> pws skata allazoun ta filarakia -> vriskw an einai panw apo ta misa to index? 
+                // pws vriskw pou eimai kai poia filarakia prepei an allaksoun                
+            } else { 
 
+            }
+        }
     }
 }
 
@@ -179,3 +203,9 @@ HT_info *getInfo(int indexDesc) {
 //         localdepth < global???
 //         split...:
             
+/*
+Createbucket:
+    Create block -> create blockInfo[localdepth???]
+
+
+*/
