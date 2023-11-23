@@ -108,18 +108,21 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     BF_Block *block;
 
 
-    int hashNum = hash_Function(record.id, info->globalDepth);
+    int hashNum = hash_Function(record.id);
+    hashNum = getMSBs(hashNum,info->globalDepth);
+    int fileDesc = table[indexDesc].fileDesc;
     BF_Block_Init(&block);
+    
     if(!hashTable[hashNum]) { //is there a bucket where entry hashed?
-        BF_AllocateBlock(table[indexDesc].fileDesc,block);
+        BF_AllocateBlock(fileDesc,block);
 
         hashTable[hashNum] = block;
         HT_block_info *data = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
-        data->localDepth =1;
+        data->localDepth = 1;
+        data++; // After block info
         Record *rec = (Record*)data;
         rec[0] = record; //This is going to be the first entry in the new bucket [OBVIOUSLY]
         data->numOfRecords = 1; //auksanoume records profanws
-        data++;
         info->totalRecords++;
 
         int bucketPointer = depth/2; 
@@ -133,7 +136,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         BF_Block_SetDirty(block);
         BF_UnpinBlock(block); //e nai
 
-        BF_GetBlock(table[indexDesc].fileDesc, 0, block); //Update ht_info
+        BF_GetBlock(fileDesc, 0, block); //Update ht_info
         void* voidData = BF_Block_GetData(block);
         voidData = info;
         BF_Block_SetDirty(block);
@@ -143,20 +146,36 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
         if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
             //insert entry
-            blockInfo++;
+            blockInfo++; // pame meta to info
             Record *recData = (Record*)blockInfo;
-            recData[blockInfo->numOfRecords - 1] = record;
+            recData[blockInfo->numOfRecords] = record;
+            blockInfo->numOfRecords++;
             
-        } else { //an apo tin alli einai gemato to bucket kavlaki
-            if(blockInfo->localDepth < info->globalDepth) {
-                //an prepei na spasei ena bucket se mikrotera tha prepei na afksithei to local depth
-                // -> ara allazoun ta filarakia -> pws skata allazoun ta filarakia -> vriskw an einai panw apo ta misa to index? 
-                // pws vriskw pou eimai kai poia filarakia prepei an allaksoun                
-            } else { 
+        } else { //an apo tin alli einai gemato to bucket 
+            if(blockInfo->localDepth == info->globalDepth) {
+                resizeHashTable(info);              
+            } 
+            //(blockInfo->localDepth < info->globalDepth) <-this is why we are here 
+            depth = 1;
+            depth << info->globalDepth; //memory allocated grows exponentially based on global depth
 
+            int buddies = 2 << (info->globalDepth - blockInfo->localDepth);
+            int bucketPointer = depth/2; 
+            if(bucketPointer > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
+                bucketPointer = 1;
+            BF_AllocateBlock(fileDesc,block);
+            BF_Block *oldBlock;
+            oldBlock = hashTable[hashNum];
+            for(int i = bucketPointer - 1; i < (depth >> blockInfo->localDepth) - 1; i++) { //create buddies, in localdepth 1 is half the table
+                // if(hashTable[i] == oldBlock) //FOUND A BUDDY O_O
             }
+
         }
     }
+}
+
+void reHash(HT_info *info) {
+
 }
 
 HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
@@ -164,10 +183,9 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
     return HT_OK;
 }
 
-int hash_Function(int num, int globalDepth) {
-    int hashValue = num; //will add actual hash function here
-    printf("Hashed at value %d",(hashValue >> sizeof(int) - globalDepth));
-    return hashValue >> sizeof(int) - globalDepth;
+int hash_Function(int num) {
+    return num;
+    //will create a real hashFunc
 }
 
 HT_info *getInfo(int indexDesc) {
@@ -186,6 +204,29 @@ HT_info *getInfo(int indexDesc) {
     return info;
 }
 
+void resizeHashTable(HT_info *info) {
+    BF_Block** hashTable = info->hashTable;
+    // Set sizes for old and new table
+    int oldIndexes = 2 << info->globalDepth;
+    int newIndexes = 2 << (info->globalDepth + 1);
+    BF_Block** newHashTable = malloc(sizeof(BF_Block*) * newIndexes);
+
+    // New indexes point as pairs to previous blocks
+    for(int i = 0; i < oldIndexes; i++) {
+        BF_Block* block = hashTable[i];
+        newHashTable[2*i] = block;
+        newHashTable[2*i+1] = block;
+    }
+
+    // Update HT_info. Need to check if it fits in one block.
+    info->globalDepth++;
+    free(hashTable);
+    info->hashTable = newHashTable;
+}
+
+unsigned int getMSBs(unsigned int num, int depth) {
+    return num >> (sizeof(int)*8 - depth);
+}
 // depth 3
 
 // [0, 1,  2,   3,  4,  5  ,6,  7]
@@ -203,9 +244,8 @@ HT_info *getInfo(int indexDesc) {
 //         localdepth < global???
 //         split...:
             
-/*
-Createbucket:
-    Create block -> create blockInfo[localdepth???]
+
+// Createbucket:
+//     Create block -> create blockInfo[localdepth???]
 
 
-*/

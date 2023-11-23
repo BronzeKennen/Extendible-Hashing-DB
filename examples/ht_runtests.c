@@ -130,6 +130,11 @@ void test_hashstatistics(void) {
   
 }
 
+
+void testMSBs(void) {
+  TEST_ASSERT(getMSBs(2512368892,3) == 4);
+}
+
 TEST_LIST = {
    { "create", test_create },
    { "open", test_open },
@@ -137,5 +142,6 @@ TEST_LIST = {
    { "insert", test_insert },
    { "printEntries", test_printentries },
    { "hashStatistics", test_hashstatistics },
+   {"testgetMSBs", testMSBs},
    { NULL, NULL }     /* zeroed record marking the end of the list */
 };

@@ -100,12 +100,11 @@ HT_ErrorCode HT_PrintAllEntries(
 	int *id 				/* τιμή του πεδίου κλειδιού προς αναζήτηση */
 	);
 
-int hash_Function(
-	int num,
-	int globalDepth
-	);
+int hash_Function(int num);
 
-
+void reHash(HT_info *info);
+unsigned int getMSBs(unsigned int num, int depth);
+void resizeHashTable(HT_info *info);
 HT_info *getInfo(int indexDesc); 
 
 #endif // HASH_FILE_H
