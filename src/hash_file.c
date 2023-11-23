@@ -4,6 +4,8 @@
 
 #include "bf.h"
 #include "hash_file.h"
+#include "extras.h"
+
 #define MAX_OPEN_FILES 20
 
 #define CALL_BF(call)       \
@@ -109,7 +111,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 
 
     int hashNum = hash_Function(record.id);
-    hashNum = getMSBs(hashNum,info->globalDepth);
+    // hashNum = getMSBs(hashNum,info->globalDepth);
     int fileDesc = table[indexDesc].fileDesc;
     BF_Block_Init(&block);
     
@@ -174,20 +176,6 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     }
 }
 
-void reHash(HT_info *info) {
-
-}
-
-HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
-    //insert code here
-    return HT_OK;
-}
-
-int hash_Function(int num) {
-    return num;
-    //will create a real hashFunc
-}
-
 HT_info *getInfo(int indexDesc) {
     BF_Block *block;
 
@@ -204,29 +192,6 @@ HT_info *getInfo(int indexDesc) {
     return info;
 }
 
-void resizeHashTable(HT_info *info) {
-    BF_Block** hashTable = info->hashTable;
-    // Set sizes for old and new table
-    int oldIndexes = 2 << info->globalDepth;
-    int newIndexes = 2 << (info->globalDepth + 1);
-    BF_Block** newHashTable = malloc(sizeof(BF_Block*) * newIndexes);
-
-    // New indexes point as pairs to previous blocks
-    for(int i = 0; i < oldIndexes; i++) {
-        BF_Block* block = hashTable[i];
-        newHashTable[2*i] = block;
-        newHashTable[2*i+1] = block;
-    }
-
-    // Update HT_info. Need to check if it fits in one block.
-    info->globalDepth++;
-    free(hashTable);
-    info->hashTable = newHashTable;
-}
-
-unsigned int getMSBs(unsigned int num, int depth) {
-    return num >> (sizeof(int)*8 - depth);
-}
 // depth 3
 
 // [0, 1,  2,   3,  4,  5  ,6,  7]

@@ -4,6 +4,7 @@
 #include <time.h>
 #include "bf.h"
 #include "hash_file.h"
+#include "extras.h"
 #include "acutest.h"
 
 
