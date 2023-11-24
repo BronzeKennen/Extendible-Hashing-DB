@@ -40,7 +40,8 @@ void reHash(BF_Block* oldBlock, BF_Block* newBlock, BF_Block **hashTable, int gl
             recnew[newInfo->numOfRecords] = rec;
             newInfo->numOfRecords++;
         } else {
-            printf("wtf\n");
+            printf("%p | %p | %p\n",hashTable[hashNum],oldBlock,newBlock);
+            //edw peftei panta giati gamiete
         }
     }
 

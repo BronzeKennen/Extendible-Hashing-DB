@@ -149,7 +149,11 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     
     } else {
         printf("Bucket exists, trying to insert...\n");
-        BF_Block *oldBlock = hashTable[hashNum];
+        BF_Block *oldBlock;
+        // BF_Block_Init(&oldBlock);
+        // BF_GetBlock(fileDesc,hashNum,oldBlock);
+        //tha prepei kapws na kanoume getBlock kai na to briskoume ston disko, meta afou to vroume na sigoureftoume oti exoun idious pointers 
+        hashTable[hashNum] = oldBlock;
         printf("========%p======\n",oldBlock);
         HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(oldBlock); //Get pointer to beginning of block
         if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
@@ -157,6 +161,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             //insert entry
             blockInfo++; // pame meta to info
             Record *recData = (Record*)blockInfo;
+            blockInfo--;
             recData[blockInfo->numOfRecords] = record;
             blockInfo->numOfRecords++;
             info->totalRecords++;
