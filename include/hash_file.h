@@ -102,7 +102,6 @@ HT_ErrorCode HT_PrintAllEntries(
 
 int hash_Function(int num);
 
-void reHash(HT_info *info);
 unsigned int getMSBs(unsigned int num, int depth);
 void resizeHashTable(HT_info *info);
 HT_info *getInfo(int indexDesc); 

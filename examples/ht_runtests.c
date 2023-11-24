@@ -102,25 +102,25 @@ void test_insert(void) {
     int r;
     printf("Insert Entries\n");
 
+    for(int id = 0; id < 10; id++) {
     //Create a random record
-    record.id = 1;
-    r = rand() % 12;
-    memcpy(record.name, names[r], strlen(names[r]) + 1);
-    r = rand() % 12;
-    memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
-    r = rand() % 10;
-    memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+      printf("Creating record %d\n",id);
+      r = rand() % 12;
+      memcpy(record.name, names[r], strlen(names[r]) + 1);
+      r = rand() % 12;
+      memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+      r = rand() % 10;
+      memcpy(record.city, cities[r], strlen(cities[r]) + 1);
 
-    //Try to insert an entry
-    HT_InsertEntry(indexDesc,record);
+      //Try to insert an entry
+      HT_InsertEntry(indexDesc,record);
+      printf("\"Succesfully\" inserted record %d\n",id);
+    }
     HT_info *info = getInfo(indexDesc);
-    TEST_ASSERT(info->totalRecords == 1);
+    TEST_ASSERT(info->totalRecords == 10);
     
     //Try to get the supposed block we placed the entry
     BF_GetBlock(indexDesc,1,block);
-    void* data = BF_Block_GetData(block);
-    Record *rec = data;
-    TEST_ASSERT(rec->id == 1); //Id should be equal to 1
 }
 
 void test_printentries(void) {

@@ -8,6 +8,8 @@
 
 #define MAX_OPEN_FILES 20
 
+//Known issue: hashtable[0] is not null on init therefore you cannot tell if there is a bucket or not. Please fix
+
 #define CALL_BF(call)       \
 {                           \
   BF_ErrorCode code = call; \
@@ -96,26 +98,28 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     HT_info *info = getInfo(indexDesc);
     
     BF_Block **hashTable; //A hash table consists of pointers to blocks therefore double pointer
-
     int depth = 1;
-    depth << info->globalDepth; //memory allocated grows exponentially based on global depth
-
+    depth <<= info->globalDepth; //memory allocated grows exponentially based on global depth
     if(info->totalRecords == 0)  { //Init table
-        hashTable = malloc(sizeof(BF_Block*) * depth);
+        hashTable = malloc(sizeof(BF_Block*) * (depth));
+        for(int i = 0; i < depth; i++) {
+            hashTable[i] = NULL;
+        }
         info->hashTable = hashTable;
     } else { //if table already exists
         hashTable = info->hashTable;
     }
 
     BF_Block *block;
+    BF_Block_Init(&block);
 
 
     int hashNum = hash_Function(record.id);
-    // hashNum = getMSBs(hashNum,info->globalDepth);
+    hashNum = getMSBs(hashNum,info->globalDepth);
     int fileDesc = table[indexDesc].fileDesc;
-    BF_Block_Init(&block);
     
     if(!hashTable[hashNum]) { //is there a bucket where entry hashed?
+        printf("Bucket doesnt' exist, creating bucket...\n");
         BF_AllocateBlock(fileDesc,block);
 
         hashTable[hashNum] = block;
@@ -124,17 +128,16 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         data++; // After block info
         Record *rec = (Record*)data;
         rec[0] = record; //This is going to be the first entry in the new bucket [OBVIOUSLY]
+        data--;
         data->numOfRecords = 1; //auksanoume records profanws
         info->totalRecords++;
-
+        printf("========%p======\n",hashTable[hashNum]);
         int bucketPointer = depth/2; 
         if(depth / 2 > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
             bucketPointer = 1;
-
-        for(int i = bucketPointer - 1; i < (depth >> data->localDepth) - 1; i++) { //create buddies, in localdepth 1 is half the table
+        for(int i = bucketPointer - 1; i < (depth >> data->localDepth); i++) { //create buddies, in localdepth 1 is half the table
             hashTable[i] = block;
         }
-
         BF_Block_SetDirty(block);
         BF_UnpinBlock(block); //e nai
 
@@ -145,32 +148,54 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         BF_UnpinBlock(block);
     
     } else {
-        HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
+        printf("Bucket exists, trying to insert...\n");
+        BF_Block *oldBlock = hashTable[hashNum];
+        printf("========%p======\n",oldBlock);
+        HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(oldBlock); //Get pointer to beginning of block
         if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
+            printf("Bucket is not full, inserting :) \n");
             //insert entry
             blockInfo++; // pame meta to info
             Record *recData = (Record*)blockInfo;
             recData[blockInfo->numOfRecords] = record;
             blockInfo->numOfRecords++;
-            
+            info->totalRecords++;
         } else { //an apo tin alli einai gemato to bucket 
+            printf("Bucket is FULL o_o\n");
             if(blockInfo->localDepth == info->globalDepth) {
                 resizeHashTable(info);              
             } 
             //(blockInfo->localDepth < info->globalDepth) <-this is why we are here 
             depth = 1;
-            depth << info->globalDepth; //memory allocated grows exponentially based on global depth
+            depth <<= info->globalDepth; //globaldepth might have changed
 
             int buddies = 2 << (info->globalDepth - blockInfo->localDepth);
+            int oneHalf = buddies/2;
             int bucketPointer = depth/2; 
             if(bucketPointer > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
                 bucketPointer = 1;
+            
             BF_AllocateBlock(fileDesc,block);
-            BF_Block *oldBlock;
-            oldBlock = hashTable[hashNum];
-            for(int i = bucketPointer - 1; i < (depth >> blockInfo->localDepth) - 1; i++) { //create buddies, in localdepth 1 is half the table
-                // if(hashTable[i] == oldBlock) //FOUND A BUDDY O_O
+
+            for(int i = bucketPointer - 1; i < depth; i++) { //vres ta filarakia, ta misa asta na deixnoun sto block pou ipirxe ta alla misa tha deixnoun sto kainourio
+                if(hashTable[i] == oldBlock) { //FOUND A BUDDY
+                    if (oneHalf > 0) oneHalf--;
+                    else hashTable[i] = block;
+                    buddies--;
+                }
+                if(buddies == 0) break;
             }
+            reHash(oldBlock,block,hashTable,info->globalDepth);
+
+            BF_Block_SetDirty(oldBlock);
+            BF_Block_SetDirty(block);
+            BF_UnpinBlock(oldBlock);
+            BF_UnpinBlock(block);
+            // HT_InsertEntry(indexDesc, record); //we were feeling a little goofy
+            Record *recData = (Record*)blockInfo;
+            recData[blockInfo->numOfRecords] = record;
+            blockInfo->numOfRecords++;
+            info->totalRecords++;
 
         }
     }
