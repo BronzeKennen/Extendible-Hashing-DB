@@ -4,7 +4,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void reHash(BF_Block* oldBlock, BF_Block* newBlock, BF_Block **hashTable, int globalDepth) {
+void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int globalDepth) {
+    BF_Block* oldBlock;
+    BF_Block* newBlock;
+
+    BF_Block_Init(&oldBlock);
+    BF_Block_Init(&newBlock);
+    
+    BF_GetBlock(fileDesc, oldBlockPos, oldBlock);
+    BF_GetBlock(fileDesc, newBlockPos, newBlock);
+
     HT_block_info *oldInfo = (HT_block_info*)BF_Block_GetData(oldBlock);
     HT_block_info *newInfo = (HT_block_info*)BF_Block_GetData(newBlock);
     
@@ -31,16 +40,16 @@ void reHash(BF_Block* oldBlock, BF_Block* newBlock, BF_Block **hashTable, int gl
         int hashNum = hash_Function(rec.id);
         hashNum = getMSBs(hashNum, globalDepth);
 
-        if(hashTable[hashNum] == oldBlock) {
+        if(hashTable[hashNum] == oldBlockPos) {
             printf("Hashing in old block\n");
             recOld[oldInfo->numOfRecords] = rec;
             oldInfo->numOfRecords++;
-        } else if(hashTable[hashNum] == newBlock){
+        } else if(hashTable[hashNum] == newBlockPos){
             printf("Hashing in new block\n");
             recnew[newInfo->numOfRecords] = rec;
             newInfo->numOfRecords++;
         } else {
-            printf("%p | %p | %p\n",hashTable[hashNum],oldBlock,newBlock);
+            printf("%d | %p | %p\n",hashTable[hashNum],oldBlock,newBlock);
             //edw peftei panta giati gamiete
         }
     }
@@ -55,17 +64,17 @@ int hash_Function(int num) {
 
 void resizeHashTable(HT_info *info) {
     printf("Resizing table...\n");
-    BF_Block** hashTable = info->hashTable;
+    int* hashTable = info->hashTable;
     // Set sizes for old and new table
     int oldIndexes = 2 << info->globalDepth;
     int newIndexes = 2 << (info->globalDepth + 1);
-    BF_Block** newHashTable = malloc(sizeof(BF_Block*) * newIndexes);
+    int* newHashTable = malloc(sizeof(int) * newIndexes);
 
     // New indexes point as pairs to previous blocks
     for(int i = 0; i < oldIndexes; i++) {
-        BF_Block* block = hashTable[i];
-        newHashTable[2*i] = block;
-        newHashTable[2*i+1] = block;
+        int blockPos = hashTable[i];
+        newHashTable[2*i] = blockPos;
+        newHashTable[2*i+1] = blockPos;
     }
 
     // Update HT_info. Need to check if it fits in one block.

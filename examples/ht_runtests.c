@@ -102,7 +102,7 @@ void test_insert(void) {
     int r;
     printf("Insert Entries\n");
 
-    for(int id = 0; id < 10; id++) {
+    for(int id = 0; id < 50; id++) {
     //Create a random record
       printf("Creating record %d\n",id);
       r = rand() % 12;
@@ -117,7 +117,7 @@ void test_insert(void) {
       printf("\"Succesfully\" inserted record %d\n",id);
     }
     HT_info *info = getInfo(indexDesc);
-    TEST_ASSERT(info->totalRecords == 10);
+    TEST_ASSERT(info->totalRecords == 50);
     
     //Try to get the supposed block we placed the entry
     BF_GetBlock(indexDesc,1,block);

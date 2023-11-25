@@ -2,7 +2,7 @@
 
 int hash_Function(int num);
 
-void reHash(BF_Block *oldBlock, BF_Block *newBlock, BF_Block **hashTable, int globalDepth);
+void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int globalDepth);
 
 unsigned int getMSBs(unsigned int num, int depth);
 

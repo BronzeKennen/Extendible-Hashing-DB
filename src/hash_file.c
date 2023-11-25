@@ -97,13 +97,13 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     
     HT_info *info = getInfo(indexDesc);
     
-    BF_Block **hashTable; //A hash table consists of pointers to blocks therefore double pointer
+    int *hashTable; //A hash table consists of pointers to blocks therefore double pointer
     int depth = 1;
     depth <<= info->globalDepth; //memory allocated grows exponentially based on global depth
     if(info->totalRecords == 0)  { //Init table
-        hashTable = malloc(sizeof(BF_Block*) * (depth));
+        hashTable = malloc(sizeof(int) * (depth));
         for(int i = 0; i < depth; i++) {
-            hashTable[i] = NULL;
+            hashTable[i] = -1; // arnhtiko index isws
         }
         info->hashTable = hashTable;
     } else { //if table already exists
@@ -118,11 +118,16 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     hashNum = getMSBs(hashNum,info->globalDepth);
     int fileDesc = table[indexDesc].fileDesc;
     
-    if(!hashTable[hashNum]) { //is there a bucket where entry hashed?
+    if(hashTable[hashNum] == -1) { //is there a bucket where entry hashed?
         printf("Bucket doesnt' exist, creating bucket...\n");
         BF_AllocateBlock(fileDesc,block);
-
-        hashTable[hashNum] = block;
+        // IDEA TOU ALEXTURINGTHEGOAT: afou kanoume bf_alloc, kanoume bf_getblockcounter gia na doume posa blocks exoume
+        // kai meta hashTable[hasNum] = bf_getblockcounter - 1. Etsi meta me to hashTable[hasNum] pou einai int, kanoume 
+        // BF_GetBlock.
+        int blockPos;
+        BF_GetBlockCounter(table[indexDesc].fileDesc, &blockPos);
+        blockPos--;
+        hashTable[hashNum] = blockPos;
         HT_block_info *data = (HT_block_info*)BF_Block_GetData(block); //Get pointer to beginning of block
         data->localDepth = 1;
         data++; // After block info
@@ -131,17 +136,19 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         data--;
         data->numOfRecords = 1; //auksanoume records profanws
         info->totalRecords++;
-        printf("========%p======\n",hashTable[hashNum]);
+        printf("========%d======\n",hashTable[hashNum]);
         int bucketPointer = depth/2; 
         if(depth / 2 > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
             bucketPointer = 1;
         for(int i = bucketPointer - 1; i < (depth >> data->localDepth); i++) { //create buddies, in localdepth 1 is half the table
-            hashTable[i] = block;
+            hashTable[i] = blockPos;
         }
         BF_Block_SetDirty(block);
         BF_UnpinBlock(block); //e nai
 
-        BF_GetBlock(fileDesc, 0, block); //Update ht_info
+
+        //Update ht_info
+        BF_GetBlock(fileDesc, 0, block); 
         void* voidData = BF_Block_GetData(block);
         voidData = info;
         BF_Block_SetDirty(block);
@@ -150,11 +157,11 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     } else {
         printf("Bucket exists, trying to insert...\n");
         BF_Block *oldBlock;
-        // BF_Block_Init(&oldBlock);
-        // BF_GetBlock(fileDesc,hashNum,oldBlock);
+        BF_Block_Init(&oldBlock);
         //tha prepei kapws na kanoume getBlock kai na to briskoume ston disko, meta afou to vroume na sigoureftoume oti exoun idious pointers 
-        hashTable[hashNum] = oldBlock;
-        printf("========%p======\n",oldBlock);
+        int blockPos = hashTable[hashNum];
+        BF_GetBlock(table[indexDesc].fileDesc, blockPos, oldBlock); // auto tha exei thema se megalutera noumera. htan test.
+        printf("========%d======\n",blockPos);
         HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(oldBlock); //Get pointer to beginning of block
         if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
             printf("Bucket is not full, inserting :) \n");
@@ -181,16 +188,19 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
                 bucketPointer = 1;
             
             BF_AllocateBlock(fileDesc,block);
+            int newBlockPos;
+            BF_GetBlockCounter(table[indexDesc].fileDesc, &newBlockPos);
+            newBlockPos--;
 
             for(int i = bucketPointer - 1; i < depth; i++) { //vres ta filarakia, ta misa asta na deixnoun sto block pou ipirxe ta alla misa tha deixnoun sto kainourio
-                if(hashTable[i] == oldBlock) { //FOUND A BUDDY
+                if(hashTable[i] == blockPos) { //FOUND A BUDDY
                     if (oneHalf > 0) oneHalf--;
-                    else hashTable[i] = block;
+                    else hashTable[i] = newBlockPos;
                     buddies--;
                 }
                 if(buddies == 0) break;
             }
-            reHash(oldBlock,block,hashTable,info->globalDepth);
+            reHash(table[indexDesc].fileDesc, blockPos, newBlockPos, hashTable, info->globalDepth);
 
             BF_Block_SetDirty(oldBlock);
             BF_Block_SetDirty(block);
