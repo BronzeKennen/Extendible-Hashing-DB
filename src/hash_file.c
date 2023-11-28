@@ -97,7 +97,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     
     HT_info *info = getInfo(indexDesc);
     
-    int *hashTable; //A hash table consists of pointers to blocks therefore double pointer
+    int *hashTable; //The table consists of integers representing the position of the block in the file.
     int depth = 1;
     depth <<= info->globalDepth; //memory allocated grows exponentially based on global depth
     if(info->totalRecords == 0)  { //Init table
@@ -206,11 +206,12 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             BF_Block_SetDirty(block);
             BF_UnpinBlock(oldBlock);
             BF_UnpinBlock(block);
-            // HT_InsertEntry(indexDesc, record); //we were feeling a little goofy
-            Record *recData = (Record*)blockInfo;
-            recData[blockInfo->numOfRecords] = record;
-            blockInfo->numOfRecords++;
-            info->totalRecords++;
+            printf("Records in block are %d out of %ld\n", blockInfo->numOfRecords, RECORDS_PER_BLOCK);
+            HT_InsertEntry(indexDesc, record); //we were feeling a little goofy
+            // Record *recData = (Record*)blockInfo;
+            // recData[blockInfo->numOfRecords] = record;
+            // blockInfo->numOfRecords++;
+            // info->totalRecords++;
 
         }
     }

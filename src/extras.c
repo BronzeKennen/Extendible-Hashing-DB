@@ -31,33 +31,38 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
     oldInfo--;
 
     newInfo++;
-    Record *recnew = (Record*)newInfo; //get pointer to records
+    Record *recNew = (Record*)newInfo; //get pointer to records
     newInfo--;
 
     for(int i = 0; i < prevRecords; i++) {
         Record rec = recOld[i];
         
         int hashNum = hash_Function(rec.id);
+        // printf("This is the hashNum before MSBs %d\n", hashNum);
         hashNum = getMSBs(hashNum, globalDepth);
 
         if(hashTable[hashNum] == oldBlockPos) {
-            printf("Hashing in old block\n");
+            printf("Hashing in old block, depth is %d\n", oldInfo->localDepth);
             recOld[oldInfo->numOfRecords] = rec;
             oldInfo->numOfRecords++;
         } else if(hashTable[hashNum] == newBlockPos){
-            printf("Hashing in new block\n");
-            recnew[newInfo->numOfRecords] = rec;
+            printf("Hashing in new block, depth is %d\n", newInfo->localDepth);
+            recNew[newInfo->numOfRecords] = rec;
             newInfo->numOfRecords++;
         } else {
             printf("%d | %p | %p\n",hashTable[hashNum],oldBlock,newBlock);
             //edw peftei panta giati gamiete
+            //edw peftei mono to teleutaio tou rehash.
+            
         }
     }
 
 }
 
 int hash_Function(int num) {
-    return num;
+    long long num2 = num * 2318589953;
+    // printf("hashNum is %d\n", (int)num2);
+    return (int)num2;
     //will create a real hashFunc
 }
 
@@ -85,6 +90,17 @@ void resizeHashTable(HT_info *info) {
 }
 
 unsigned int getMSBs(unsigned int num, int depth) {
-    printf("hashed at %d\n",(num >> (sizeof(int)*8 - depth)));
-    return num >> (sizeof(int)*8 - depth);
+    printf("The %d MSBs are %04d\n", depth, inBits(num >> (sizeof(int)*8 - depth)));
+    return num >>= (sizeof(int)*8 - depth);
+}
+
+int inBits(int decimal_num) {
+    int binary_num = 0, i = 1, remainder;
+    while (decimal_num != 0) {
+        remainder = decimal_num % 2;
+        decimal_num /= 2;
+        binary_num += remainder * i;
+        i *= 10;
+    }
+    return binary_num;
 }

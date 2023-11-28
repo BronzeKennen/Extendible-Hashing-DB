@@ -104,6 +104,7 @@ void test_insert(void) {
 
     for(int id = 0; id < 50; id++) {
     //Create a random record
+      record.id = id; // MALAKA ME TI ID TO EVAZES TOSH WRA?
       printf("Creating record %d\n",id);
       r = rand() % 12;
       memcpy(record.name, names[r], strlen(names[r]) + 1);

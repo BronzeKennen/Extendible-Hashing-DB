@@ -7,3 +7,5 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
 unsigned int getMSBs(unsigned int num, int depth);
 
 void resizeHashTable(HT_info *info);
+
+int inBits(int decimal_num);
