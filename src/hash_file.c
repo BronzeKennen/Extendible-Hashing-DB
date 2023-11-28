@@ -207,14 +207,40 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             BF_UnpinBlock(oldBlock);
             BF_UnpinBlock(block);
             printf("Records in block are %d out of %ld\n", blockInfo->numOfRecords, RECORDS_PER_BLOCK);
-            HT_InsertEntry(indexDesc, record); //we were feeling a little goofy
-            // Record *recData = (Record*)blockInfo;
-            // recData[blockInfo->numOfRecords] = record;
-            // blockInfo->numOfRecords++;
-            // info->totalRecords++;
-
+            HT_InsertEntry(indexDesc, record); //we were feeling a little goofy /* I AM THE GOD */
         }
     }
+}
+
+HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
+    // printf("%dFFFFFFFFFFFFFFFFFFFFFFFFFF\n", table[indexDesc].infoBlock->globalDepth);
+    HT_info* info = getInfo(indexDesc);
+    int hashNum = hash_Function(*id);
+    hashNum = getMSBs(hashNum, info->globalDepth);
+
+    int* hashTable = info->hashTable;
+    int blockPos = hashTable[hashNum];
+
+    BF_Block *block;
+    BF_Block_Init(&block);
+
+    BF_GetBlock(table[indexDesc].fileDesc, blockPos, block);
+
+    HT_block_info* blockInfo = (HT_block_info*)BF_Block_GetData(block);
+    blockInfo++;
+    Record* rec = (Record*)blockInfo;
+    blockInfo--;
+    
+    for(int i = 0; i < blockInfo->numOfRecords; i++) {
+        if(rec[i].id == *id) {
+            printf("%s ", rec[i].name);
+            printf("%s ", rec[i].surname);
+            printf("%s ", rec[i].city);
+            printf("%d\n", rec[i].id);
+        }
+    }
+
+    BF_Block_Destroy(&block);
 }
 
 HT_info *getInfo(int indexDesc) {

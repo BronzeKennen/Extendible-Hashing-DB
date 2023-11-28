@@ -122,10 +122,16 @@ void test_insert(void) {
     
     //Try to get the supposed block we placed the entry
     BF_GetBlock(indexDesc,1,block);
+    for(int id = 0; id < 50; id++)
+      HT_PrintAllEntries(indexDesc, &id);
 }
 
 void test_printentries(void) {
-  
+    // HT_Init();
+    // int indexDesc;
+    // HT_OpenIndex("test1.db",&indexDesc);
+    // int id = 5;
+    // HT_PrintAllEntries(indexDesc, &id);
 }
 
 void test_hashstatistics(void) {
