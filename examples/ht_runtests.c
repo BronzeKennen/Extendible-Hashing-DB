@@ -67,7 +67,7 @@ const char* cities[] = {
 void test_create(void) {
     TEST_ASSERT(HT_Init() == HT_OK);
 
-    TEST_ASSERT(HT_CreateIndex("test1.db", 4) == HT_OK); //Should work
+    TEST_ASSERT(HT_CreateIndex("test1.db", 2) == HT_OK); //Should work
     TEST_ASSERT(HT_CreateIndex("test1.db", 8) != HT_OK); //Should not work, file already exists
 
 }
@@ -101,10 +101,10 @@ void test_insert(void) {
     srand(12569874);
     int r;
     printf("Insert Entries\n");
-
-    for(int id = 0; id < 50; id++) {
+    int numOfRecords = 500;
+    for(int id = 0; id < numOfRecords; id++) {
     //Create a random record
-      record.id = id; // MALAKA ME TI ID TO EVAZES TOSH WRA?
+      record.id = id; 
       printf("Creating record %d\n",id);
       r = rand() % 12;
       memcpy(record.name, names[r], strlen(names[r]) + 1);
@@ -118,20 +118,17 @@ void test_insert(void) {
       printf("\"Succesfully\" inserted record %d\n",id);
     }
     HT_info *info = getInfo(indexDesc);
-    TEST_ASSERT(info->totalRecords == 50);
+    TEST_ASSERT(info->totalRecords == numOfRecords);
     
     //Try to get the supposed block we placed the entry
     BF_GetBlock(indexDesc,1,block);
-    for(int id = 0; id < 50; id++)
+    for(int id = 0; id < numOfRecords; id++)
       HT_PrintAllEntries(indexDesc, &id);
 }
 
 void test_printentries(void) {
-    // HT_Init();
-    // int indexDesc;
-    // HT_OpenIndex("test1.db",&indexDesc);
-    // int id = 5;
-    // HT_PrintAllEntries(indexDesc, &id);
+    //Hash table is gonna need to be saved then accessed.
+
 }
 
 void test_hashstatistics(void) {

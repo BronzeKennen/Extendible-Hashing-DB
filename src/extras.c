@@ -51,8 +51,7 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
             newInfo->numOfRecords++;
         } else {
             printf("%d | %p | %p\n",hashTable[hashNum],oldBlock,newBlock);
-            //edw peftei panta giati gamiete
-            //edw peftei mono to teleutaio tou rehash.
+            //edw peftei mono meta apo resize.
             
         }
     }
@@ -71,22 +70,25 @@ void resizeHashTable(HT_info *info) {
     printf("Resizing table...\n");
     int* hashTable = info->hashTable;
     // Set sizes for old and new table
-    int oldIndexes = 2 << info->globalDepth;
-    int newIndexes = 2 << (info->globalDepth + 1);
+    int oldIndexes = 2 << info->globalDepth - 1;
+    int newIndexes = 2 << (info->globalDepth); 
     int* newHashTable = malloc(sizeof(int) * newIndexes);
 
+    for(int i = 0; i < newIndexes; i++) {
+        newHashTable[i] = -1;
+    }
     // New indexes point as pairs to previous blocks
     for(int i = 0; i < oldIndexes; i++) {
         int blockPos = hashTable[i];
         newHashTable[2*i] = blockPos;
         newHashTable[2*i+1] = blockPos;
     }
-
     // Update HT_info. Need to check if it fits in one block.
     info->globalDepth++;
+    printf("Global depth is now %d\n",info->globalDepth);
     free(hashTable);
     info->hashTable = newHashTable;
-    printf("Hash table now has total space of %d buckets.\n",(2 << info->globalDepth));
+    printf("Hash table now has total space of %d buckets.\n",(1 << info->globalDepth));
 }
 
 unsigned int getMSBs(unsigned int num, int depth) {

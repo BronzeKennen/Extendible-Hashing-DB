@@ -77,9 +77,17 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
 
 HT_ErrorCode HT_CloseFile(int indexDesc) {
     BF_Block *block; 
-    BF_Block_Init(&block);
-    int block_num;
     int fileDesc = table[indexDesc].fileDesc;
+    BF_Block_Init(&block);
+    BF_AllocateBlock(fileDesc,block);
+    
+    
+    BF_GetBlock(fileDesc,0,block);
+    HT_info* info = (HT_info*)BF_Block_GetData(block);
+    
+
+
+    int block_num;
     BF_GetBlockCounter(fileDesc, &block_num);
     for(int i = 0; i < block_num; i++) {
         CALL_BF(BF_GetBlock(fileDesc, i, block));
@@ -160,7 +168,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         BF_Block_Init(&oldBlock);
         //tha prepei kapws na kanoume getBlock kai na to briskoume ston disko, meta afou to vroume na sigoureftoume oti exoun idious pointers 
         int blockPos = hashTable[hashNum];
-        BF_GetBlock(table[indexDesc].fileDesc, blockPos, oldBlock); // auto tha exei thema se megalutera noumera. htan test.
+        BF_GetBlock(table[indexDesc].fileDesc, blockPos, oldBlock);
         printf("========%d======\n",blockPos);
         HT_block_info *blockInfo = (HT_block_info*)BF_Block_GetData(oldBlock); //Get pointer to beginning of block
         if(blockInfo->numOfRecords < RECORDS_PER_BLOCK) { //AN DEN EINAI GEMATO, TOTE APLA VAZOUME TO RECORD LMAO
@@ -174,11 +182,14 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             info->totalRecords++;
         } else { //an apo tin alli einai gemato to bucket 
             printf("Bucket is FULL o_o\n");
+            depth = 1;
             if(blockInfo->localDepth == info->globalDepth) {
-                resizeHashTable(info);              
+                resizeHashTable(info);
+                hashTable = info->hashTable;
+                blockPos *= 2;
+                blockPos = hashTable[2*hashNum];
             } 
             //(blockInfo->localDepth < info->globalDepth) <-this is why we are here 
-            depth = 1;
             depth <<= info->globalDepth; //globaldepth might have changed
 
             int buddies = 2 << (info->globalDepth - blockInfo->localDepth);
@@ -207,7 +218,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             BF_UnpinBlock(oldBlock);
             BF_UnpinBlock(block);
             printf("Records in block are %d out of %ld\n", blockInfo->numOfRecords, RECORDS_PER_BLOCK);
-            HT_InsertEntry(indexDesc, record); //we were feeling a little goofy /* I AM THE GOD */
+            HT_InsertEntry(indexDesc, record);
         }
     }
 }
@@ -258,26 +269,3 @@ HT_info *getInfo(int indexDesc) {
 
     return info;
 }
-
-// depth 3
-
-// [0, 1,  2,   3,  4,  5  ,6,  7]
-// 000 001 010 011 100 101 110 111
-
-// for(i ... i < globalDepth)
-//     shiftright
-//     add to var -> go to bucket of choice
-
-// if(!bucket)
-//     createbucket.....
-// else
-//     xwraei?!?!?
-//     if not:
-//         localdepth < global???
-//         split...:
-            
-
-// Createbucket:
-//     Create block -> create blockInfo[localdepth???]
-
-
