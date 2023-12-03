@@ -47,9 +47,6 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 
     HT_info *data = (HT_info*)BF_Block_GetData(block); //Get pointer to beginning of block
     data->globalDepth = depth;
-    data->maxRecordsPerBucket = 0;
-    data->minRecordsPerBucket = 0;
-    data->numOfBuckets = 0;
     data->totalRecords = 0;
     data->type = HASH;
 
@@ -69,6 +66,7 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     BF_OpenFile(fileName,&fileDesc);
     HT_info *info = getInfo(*indexDesc);
     table[openFileCounter].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
+    table[openFileCounter].fileName = fileName;
 
     openFileCounter++;
 
@@ -161,7 +159,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         voidData = info;
         BF_Block_SetDirty(block);
         BF_UnpinBlock(block);
-    
+        BF_Block_Destroy(&block);
     } else {
         printf("Bucket exists, trying to insert...\n");
         BF_Block *oldBlock;
@@ -183,6 +181,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         } else { //an apo tin alli einai gemato to bucket 
             printf("Bucket is FULL o_o\n");
             depth = 1;
+            printf("LOCAL %d GLOBAL %d\n", blockInfo->localDepth, info->globalDepth);
             if(blockInfo->localDepth == info->globalDepth) {
                 resizeHashTable(info);
                 hashTable = info->hashTable;
@@ -191,16 +190,19 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             } 
             //(blockInfo->localDepth < info->globalDepth) <-this is why we are here 
             depth <<= info->globalDepth; //globaldepth might have changed
-
             int buddies = 2 << (info->globalDepth - blockInfo->localDepth);
             int oneHalf = buddies/2;
             int bucketPointer = depth/2; 
             if(bucketPointer > hashNum) //poia einai ta filarakia, ta prwta misa i ta epomena misa?!?!?!!?
                 bucketPointer = 1;
             
-            BF_AllocateBlock(fileDesc,block);
+            
+            BF_ErrorCode code = BF_AllocateBlock(fileDesc,block);
+            if(code != HT_OK) 
+                BF_PrintError(code);
             int newBlockPos;
             BF_GetBlockCounter(table[indexDesc].fileDesc, &newBlockPos);
+            printf("WE HAVE %d BLOCKS\n", newBlockPos);
             newBlockPos--;
 
             for(int i = bucketPointer - 1; i < depth; i++) { //vres ta filarakia, ta misa asta na deixnoun sto block pou ipirxe ta alla misa tha deixnoun sto kainourio
@@ -213,13 +215,15 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             }
             reHash(table[indexDesc].fileDesc, blockPos, newBlockPos, hashTable, info->globalDepth);
 
-            BF_Block_SetDirty(oldBlock);
             BF_Block_SetDirty(block);
-            BF_UnpinBlock(oldBlock);
             BF_UnpinBlock(block);
+            BF_Block_Destroy(&block);
             printf("Records in block are %d out of %ld\n", blockInfo->numOfRecords, RECORDS_PER_BLOCK);
             HT_InsertEntry(indexDesc, record);
         }
+        BF_Block_SetDirty(oldBlock);
+        BF_UnpinBlock(oldBlock);
+        BF_Block_Destroy(&oldBlock);
     }
 }
 
@@ -251,7 +255,38 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
         }
     }
 
-    BF_Block_Destroy(&block);
+    BF_UnpinBlock(block);
+    BF_Block_Destroy(&block);   
+}
+
+HT_ErrorCode HashStatistics(char* filename) {
+    int indexDesc;
+    for(indexDesc = 0; indexDesc < MAX_OPEN_FILES; indexDesc++) 
+        if(table[indexDesc].fileName == filename) break;
+    BF_Block* block;
+    BF_Block_Init(&block);
+    HT_info* info = getInfo(indexDesc);
+    int blockNum;
+    int fileDesc = table[indexDesc].fileDesc;
+    BF_GetBlockCounter(fileDesc, &blockNum);
+    blockNum--;
+    int minRecords = RECORDS_PER_BLOCK;
+    int maxRecords = 0;
+    float averageRecords = 0;
+    for(int i = 1; i < blockNum + 1; i++) {
+        BF_GetBlock(fileDesc, i, block);
+        char* data = BF_Block_GetData(block);
+        HT_block_info* info = (HT_block_info*) data;
+        if(info->numOfRecords < minRecords)
+            minRecords = info->numOfRecords;
+        if(info->numOfRecords > maxRecords)
+            maxRecords = info->numOfRecords;
+        averageRecords += info->numOfRecords;
+    }
+    averageRecords = averageRecords / (float)blockNum;
+    printf("Hash Statistics:\n\t Total number of buckets: %d\n\t Max records in a bucket: %d\n\t Min records in a bucket: %d\n\t Average records in a bucket: %f\n",
+            blockNum, maxRecords, minRecords, averageRecords);
+    return HT_OK;
 }
 
 HT_info *getInfo(int indexDesc) {
@@ -265,7 +300,14 @@ HT_info *getInfo(int indexDesc) {
     void* Pointer = BF_Block_GetData(block);
 
     HT_info* info = (HT_info*)Pointer;
+    
     BF_Block_Destroy(&block);
 
     return info;
 }
+
+
+/*
+    |1 |2 |11|4 |5 |6 |7 |8 |9 |10|
+
+*/

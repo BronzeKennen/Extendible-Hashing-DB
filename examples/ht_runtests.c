@@ -101,7 +101,7 @@ void test_insert(void) {
     srand(12569874);
     int r;
     printf("Insert Entries\n");
-    int numOfRecords = 500;
+    int numOfRecords = 1000; // ΔΕΝ ΞΕΡΩ ΠΟΥ MAXΑΡΕΙ ΕΙΝΑΙ ΠΟΛΥ ΜΑΚΡΙΑ.
     for(int id = 0; id < numOfRecords; id++) {
     //Create a random record
       record.id = id; 
@@ -115,15 +115,16 @@ void test_insert(void) {
 
       //Try to insert an entry
       HT_InsertEntry(indexDesc,record);
-      printf("\"Succesfully\" inserted record %d\n",id);
+      //printf("\"Succesfully\" inserted record %d\n",id);
     }
     HT_info *info = getInfo(indexDesc);
     TEST_ASSERT(info->totalRecords == numOfRecords);
     
-    //Try to get the supposed block we placed the entry
-    BF_GetBlock(indexDesc,1,block);
-    for(int id = 0; id < numOfRecords; id++)
-      HT_PrintAllEntries(indexDesc, &id);
+    // Try to get the supposed block we placed the entry
+    // for(int id = 0; id < numOfRecords; id++)
+    //   HT_PrintAllEntries(indexDesc, &id);
+
+    HashStatistics("test1.db");
 }
 
 void test_printentries(void) {

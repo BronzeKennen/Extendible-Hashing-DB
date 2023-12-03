@@ -55,7 +55,14 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
             
         }
     }
+    BF_Block_SetDirty(oldBlock);
+    BF_Block_SetDirty(newBlock);
 
+    BF_UnpinBlock(oldBlock);
+    BF_UnpinBlock(newBlock); 
+
+    BF_Block_Destroy(&oldBlock);
+    BF_Block_Destroy(&newBlock);
 }
 
 int hash_Function(int num) {

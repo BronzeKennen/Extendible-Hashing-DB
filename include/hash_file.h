@@ -21,14 +21,10 @@ typedef enum Type {
 
 typedef struct ht_info {
 	
-	int numOfBuckets; //note: This is num of blocks. Not last block id. Last block id is num_of_blocks - 1
 	int totalRecords;
-	int minRecordsPerBucket;
-	int maxRecordsPerBucket;
 	int globalDepth;
 	Type type;
 	int *hashTable;
-
 } HT_info;
 
 typedef struct ht_block_info {
@@ -40,6 +36,7 @@ typedef struct ht_block_info {
 
 typedef struct table_file_entry {
 
+	const char* fileName;
 	int fileDesc;
 	HT_info* infoBlock;
 
@@ -98,6 +95,17 @@ HT_ErrorCode HT_InsertEntry(
 HT_ErrorCode HT_PrintAllEntries(
 	int indexDesc,	/* θέση στον πίνακα με τα ανοιχτά αρχεία */
 	int *id 				/* τιμή του πεδίου κλειδιού προς αναζήτηση */
+	);
+
+
+/* 
+ * Η συνάρτηση διαβάζει το αρχείο με όνομα filename και τυπώνει στατιστικά στοιχεία: α) 
+ * Το πόσα blocks έχει ένα αρχείο, β) Το ελάχιστο, το μέσο και το μέγιστο πλήθος εγγραφών 
+ * που έχει κάθε bucket ενός αρχείου, Σε περίπτωση που εκτελεστεί επιτυχώς επιστρέφεται 
+ * HT_OK, ενώ σε διαφορετική περίπτωση κάποιος κωδικός λάθους.
+ */
+HT_ErrorCode HashStatistics(
+	char* filename /* όνομα του αρχείου που ενδιαφέρει */ 
 	);
 
 int hash_Function(int num);
