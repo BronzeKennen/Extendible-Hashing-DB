@@ -22,14 +22,23 @@
 #define RECORDS_PER_BLOCK (BF_BLOCK_SIZE - sizeof(HT_block_info)) / sizeof(Record)
 
 
+// Global Data that keep track of open files
 HT_table_file_entry *table;
 int openFileCounter;
  
 HT_ErrorCode HT_Init() {
     openFileCounter = 0;
-    BF_Init(LRU);
+    CALL_BF(BF_Init(LRU));
+
+    // Initialize the table of open files
     table = malloc(sizeof(HT_table_file_entry) * MAX_OPEN_FILES);
     if(!table) return HT_ERROR;
+    for(int i=0; i<MAX_OPEN_FILES; i++){
+        table[i].fileDesc = -1;
+        table[i].infoBlock = NULL;
+        table[i].fileName = '\0';
+    }
+
     return HT_OK;
 
 }
@@ -52,7 +61,7 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 
 
     BF_Block_SetDirty(block);
-    BF_UnpinBlock(block);
+    CALL_BF(BF_UnpinBlock(block));
 
     CALL_BF(BF_CloseFile(fileDesc));
     BF_Block_Destroy(&block);
@@ -63,11 +72,20 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     int fileDesc;
     *indexDesc = openFileCounter;
-    BF_OpenFile(fileName,&fileDesc);
+    BF_ErrorCode code = BF_OpenFile(fileName,&fileDesc);
+    if(code != BF_OK) return HT_ERROR;
     HT_info *info = getInfo(*indexDesc);
-    table[openFileCounter].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
-    table[openFileCounter].fileName = fileName;
 
+    // Find the next available spot in the open file table and insert the file 
+    for(int i=0; i<MAX_OPEN_FILES; i++){
+        if(table[i].fileDesc == -1){
+            table[i].fileDesc = *indexDesc;
+            table[i].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
+            table[i].fileName = fileName;
+            break;
+        }
+    }
+    //na tsekarw gia gemato pinaka???
     openFileCounter++;
 
     return HT_OK;
@@ -87,13 +105,17 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 
     int block_num;
     BF_GetBlockCounter(fileDesc, &block_num);
-    for(int i = 0; i < block_num; i++) {
+    for(int i = 0; i < block_num; i++) { // is this needed????????????
         CALL_BF(BF_GetBlock(fileDesc, i, block));
         CALL_BF(BF_UnpinBlock(block));
     }
 
     BF_Block_Destroy(&block);
-    CALL_BF(BF_CloseFile(fileDesc));
+    CALL_BF(BF_CloseFile(fileDesc));  // eeeeeee kapou na epistrefw HT_ERROR!!!!!!
+    // Free the table position
+    table[indexDesc].fileDesc = -1;  
+    table[indexDesc].infoBlock = NULL;
+    table[indexDesc].fileName = '\0';
     openFileCounter--;
 
     return HT_OK;
@@ -150,7 +172,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             hashTable[i] = blockPos;
         }
         BF_Block_SetDirty(block);
-        BF_UnpinBlock(block); //e nai
+        CALL_BF(BF_UnpinBlock(block)); //e nai
 
 
         //Update ht_info
@@ -158,7 +180,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
         void* voidData = BF_Block_GetData(block);
         voidData = info;
         BF_Block_SetDirty(block);
-        BF_UnpinBlock(block);
+        CALL_BF(BF_UnpinBlock(block));
         BF_Block_Destroy(&block);
     } else {
         printf("Bucket exists, trying to insert...\n");
@@ -222,7 +244,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
             HT_InsertEntry(indexDesc, record);
         }
         BF_Block_SetDirty(oldBlock);
-        BF_UnpinBlock(oldBlock);
+        CALL_BF(BF_UnpinBlock(oldBlock));
         BF_Block_Destroy(&oldBlock);
     }
 }
@@ -255,7 +277,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
         }
     }
 
-    BF_UnpinBlock(block);
+    CALL_BF(BF_UnpinBlock(block));
     BF_Block_Destroy(&block);   
 }
 
