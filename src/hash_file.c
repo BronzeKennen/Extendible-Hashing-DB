@@ -25,7 +25,9 @@
 // Global Data that keep track of open files
 HT_table_file_entry *table;
 int openFileCounter;
- 
+
+
+// Allocate memory for open files table and initialize values as empty.
 HT_ErrorCode HT_Init() {
     openFileCounter = 0;
     CALL_BF(BF_Init(LRU));
@@ -35,14 +37,26 @@ HT_ErrorCode HT_Init() {
     if(!table) return HT_ERROR;
     for(int i=0; i<MAX_OPEN_FILES; i++){
         table[i].fileDesc = -1;
-        table[i].infoBlock = NULL;
         table[i].fileName = '\0';
     }
 
     return HT_OK;
 
 }
-//look for first open space in table VALVE PLEASE FIX
+
+// Close any open files and free the memory of the open files table.
+HT_ErrorCode HT_Destroy() {
+        for(int i = 0; i < MAX_OPEN_FILES, openFileCounter > 0; i++) {
+            if(table[i].fileDesc != -1) {
+                HT_CloseFile(i);
+                openFileCounter--;
+            }
+        } 
+    free(table);
+    return HT_OK;
+}
+
+// Create a new hash file with name = *filename and global depth = depth. 
 HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
     int fileDesc;
     BF_ErrorCode exists = BF_CreateFile(filename);
@@ -69,25 +83,27 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
     return HT_OK;
 }
 
-HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
-    int fileDesc;
-    *indexDesc = openFileCounter;
-    BF_ErrorCode code = BF_OpenFile(fileName,&fileDesc);
-    if(code != BF_OK) return HT_ERROR;
-    HT_info *info = getInfo(*indexDesc);
 
+// Open the file with name = *fileName and insert in open files table. The position of the file is stored in indexDesc.
+HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
+    if(openFileCounter == MAX_OPEN_FILES) {
+        return HT_ERROR;
+    }
     // Find the next available spot in the open file table and insert the file 
     for(int i=0; i<MAX_OPEN_FILES; i++){
         if(table[i].fileDesc == -1){
-            table[i].fileDesc = *indexDesc;
-            table[i].infoBlock = info; // πιθανώς το χειρότερο cast που έχω κάνει.
-            table[i].fileName = fileName;
+            *indexDesc = i;
             break;
         }
     }
-    //na tsekarw gia gemato pinaka???
-    openFileCounter++;
+    int fileDesc;
+    BF_ErrorCode code = BF_OpenFile(fileName,&fileDesc);
+    if(code != BF_OK) return HT_ERROR;
+    HT_info *info = getInfo(*indexDesc);
+    table[*indexDesc].fileDesc = fileDesc;
+    table[*indexDesc].fileName = fileName;
 
+    openFileCounter++;
     return HT_OK;
 }
 
@@ -105,8 +121,8 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 
     int block_num;
     BF_GetBlockCounter(fileDesc, &block_num);
-    for(int i = 0; i < block_num; i++) { // is this needed????????????
-        CALL_BF(BF_GetBlock(fileDesc, i, block));
+    for(int i = 0; i < block_num; i++) {
+        BF_Block_SetDirty(block);
         CALL_BF(BF_UnpinBlock(block));
     }
 
@@ -114,9 +130,10 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     CALL_BF(BF_CloseFile(fileDesc));  // eeeeeee kapou na epistrefw HT_ERROR!!!!!!
     // Free the table position
     table[indexDesc].fileDesc = -1;  
-    table[indexDesc].infoBlock = NULL;
     table[indexDesc].fileName = '\0';
     openFileCounter--;
+
+    // SAVE THE HASHTABLE.
 
     return HT_OK;
 }
@@ -149,9 +166,6 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     if(hashTable[hashNum] == -1) { //is there a bucket where entry hashed?
         printf("Bucket doesnt' exist, creating bucket...\n");
         BF_AllocateBlock(fileDesc,block);
-        // IDEA TOU ALEXTURINGTHEGOAT: afou kanoume bf_alloc, kanoume bf_getblockcounter gia na doume posa blocks exoume
-        // kai meta hashTable[hasNum] = bf_getblockcounter - 1. Etsi meta me to hashTable[hasNum] pou einai int, kanoume 
-        // BF_GetBlock.
         int blockPos;
         BF_GetBlockCounter(table[indexDesc].fileDesc, &blockPos);
         blockPos--;
@@ -304,6 +318,7 @@ HT_ErrorCode HashStatistics(char* filename) {
         if(info->numOfRecords > maxRecords)
             maxRecords = info->numOfRecords;
         averageRecords += info->numOfRecords;
+        BF_UnpinBlock(block);
     }
     averageRecords = averageRecords / (float)blockNum;
     printf("Hash Statistics:\n\t Total number of buckets: %d\n\t Max records in a bucket: %d\n\t Min records in a bucket: %d\n\t Average records in a bucket: %f\n",
@@ -311,6 +326,8 @@ HT_ErrorCode HashStatistics(char* filename) {
     return HT_OK;
 }
 
+
+// Return infoBlock of given index.
 HT_info *getInfo(int indexDesc) {
     BF_Block *block;
 
