@@ -142,33 +142,48 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     BF_Block_Init(&block2);
     int dictBlocks;
     BF_GetBlockCounter(dictDesc, &dictBlocks);
-    float tableBlocks = (float)tableSlots / (BF_BLOCK_SIZE / sizeof(int));
+    int tableBlocks = ((int)tableSlots / (BF_BLOCK_SIZE / sizeof(int))) + 1; //what the fuck? (this is 0.125 btw)
+    printf("%d\n",tableBlocks);
     for(int blockPos = 0; blockPos < tableBlocks; blockPos++) {
         if(blockPos < dictBlocks) {
             BF_GetBlock(dictDesc, blockPos, block2);
+            printf("yo hello?\n");
         } else {
             BF_AllocateBlock(dictDesc, block2);
+            printf("wassup?\n");
+
         }
         // Now we have the block we want.
         int* tablePart = (int*)BF_Block_GetData(block2);
         if(tableSlots < (BF_BLOCK_SIZE / sizeof(int))) {
-            memcpy(tablePart, &info->hashTable[blockPos * (BF_BLOCK_SIZE / sizeof(int))], tableSlots);
+            memcpy(tablePart, &info->hashTable[blockPos * (BF_BLOCK_SIZE / sizeof(int)) ], sizeof(tableSlots)*tableSlots);
+            printf("??  ->%ld\n",blockPos * (BF_BLOCK_SIZE / sizeof(int)));
         } else {
-            memcpy(tablePart, &info->hashTable[blockPos * (BF_BLOCK_SIZE / sizeof(int))], (BF_BLOCK_SIZE / sizeof(int)));
+            memcpy(tablePart, &info->hashTable[blockPos * ((BF_BLOCK_SIZE / sizeof(int)) )], BF_BLOCK_SIZE);
+            printf("->%ld\n",blockPos * ((BF_BLOCK_SIZE / sizeof(int))));
             tableSlots -= BF_BLOCK_SIZE / sizeof(int);
         }
         BF_Block_SetDirty(block2);
         BF_UnpinBlock(block2);
+        printf("I looped %d times\n",blockPos);
     }
-    BF_GetBlock(dictDesc, 0, block2);
-    int* test = (int*)BF_Block_GetData(block2);
+    int num; //note: afto einai test na dw an ta ipoloipa records grafontai sta ipoloipa blocks. Ta records grafontai, diladi as of now me afto to test grafontai
+    //buckets se 2 blocks kai boreis na ta diavaseis an omws kratas san indexes apo 0 ews 128, den enonoume to hashtable se 1 opote den boreis na pas apo 128 ews 256,
+    //an omws pareis to prwto block kaneis print ola ta buckets, meta to deftero kai kaneis print pali ola ta buckets, vgazei diaforeitka buckets kai mono ama diavaseis
+    //apo afta ta 2 pairneis ontos apotelesmata kai oxi undefined behavior
+    BF_GetBlockCounter(dictDesc,&num);
+    for(int j = 0; j < num-1; j++) {
+    BF_GetBlock(dictDesc, j, block2);
+    printf("J is %d\n",j);
+    int* test = (int*)BF_Block_GetData(block2); //get the first block?
     printf("Total slots are %d\n", finalSlots);
-    for(int i = 0; i < finalSlots; i++) {
+    for(int i = 0; i < 128; i++) {
         printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
         BF_GetBlock(fileDesc, test[i], block);
         char* data = BF_Block_GetData(block);
         HT_block_info* info = (HT_block_info*) data;
         printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
+    }
     }
     BF_Block_Destroy(&block);
     BF_Block_Destroy(&block2);

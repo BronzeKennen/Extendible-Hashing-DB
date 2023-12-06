@@ -112,7 +112,7 @@ void test_insert(void) {
     srand(12569874);
     int r;
     printf("Insert Entries\n");
-    int numOfRecords = 10; // ΔΕΝ ΞΕΡΩ ΠΟΥ MAXΑΡΕΙ ΕΙΝΑΙ ΠΟΛΥ ΜΑΚΡΙΑ.
+    int numOfRecords = 500; // ΔΕΝ ΞΕΡΩ ΠΟΥ MAXΑΡΕΙ ΕΙΝΑΙ ΠΟΛΥ ΜΑΚΡΙΑ.
     for(int id = 0; id < numOfRecords; id++) {
     //Create a random record
       record.id = id; 
