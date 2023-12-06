@@ -116,7 +116,10 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     
     BF_GetBlock(fileDesc,0,block);
     HT_info* info = (HT_info*)BF_Block_GetData(block);
-    
+    int* hashTable = info->hashTable;
+    int tableSlots = 1;
+    tableSlots <<= info->globalDepth;
+    int finalSlots = tableSlots;
 
 
     int block_num;
@@ -126,14 +129,52 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
         CALL_BF(BF_UnpinBlock(block));
     }
 
-    BF_Block_Destroy(&block);
-    CALL_BF(BF_CloseFile(fileDesc));  // eeeeeee kapou na epistrefw HT_ERROR!!!!!!
     // Free the table position
     table[indexDesc].fileDesc = -1;  
     table[indexDesc].fileName = '\0';
     openFileCounter--;
 
     // SAVE THE HASHTABLE.
+    int dictDesc;
+    BF_CreateFile("dict.db");
+    BF_OpenFile("dict.db", &dictDesc);
+    BF_Block* block2;
+    BF_Block_Init(&block2);
+    int dictBlocks;
+    BF_GetBlockCounter(dictDesc, &dictBlocks);
+    float tableBlocks = (float)tableSlots / (BF_BLOCK_SIZE / sizeof(int));
+    for(int blockPos = 0; blockPos < tableBlocks; blockPos++) {
+        if(blockPos < dictBlocks) {
+            BF_GetBlock(dictDesc, blockPos, block2);
+        } else {
+            BF_AllocateBlock(dictDesc, block2);
+        }
+        // Now we have the block we want.
+        int* tablePart = (int*)BF_Block_GetData(block2);
+        if(tableSlots < (BF_BLOCK_SIZE / sizeof(int))) {
+            memcpy(tablePart, &info->hashTable[blockPos * (BF_BLOCK_SIZE / sizeof(int))], tableSlots);
+        } else {
+            memcpy(tablePart, &info->hashTable[blockPos * (BF_BLOCK_SIZE / sizeof(int))], (BF_BLOCK_SIZE / sizeof(int)));
+            tableSlots -= BF_BLOCK_SIZE / sizeof(int);
+        }
+        BF_Block_SetDirty(block2);
+        BF_UnpinBlock(block2);
+    }
+    BF_GetBlock(dictDesc, 0, block2);
+    int* test = (int*)BF_Block_GetData(block2);
+    printf("Total slots are %d\n", finalSlots);
+    for(int i = 0; i < finalSlots; i++) {
+        printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
+        BF_GetBlock(fileDesc, test[i], block);
+        char* data = BF_Block_GetData(block);
+        HT_block_info* info = (HT_block_info*) data;
+        printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
+    }
+    BF_Block_Destroy(&block);
+    BF_Block_Destroy(&block2);
+    CALL_BF(BF_CloseFile(fileDesc));  // eeeeeee kapou na epistrefw HT_ERROR!!!!!!
+    BF_CloseFile(dictDesc);
+
 
     return HT_OK;
 }
@@ -321,8 +362,8 @@ HT_ErrorCode HashStatistics(char* filename) {
         BF_UnpinBlock(block);
     }
     averageRecords = averageRecords / (float)blockNum;
-    printf("Hash Statistics:\n\t Total number of buckets: %d\n\t Max records in a bucket: %d\n\t Min records in a bucket: %d\n\t Average records in a bucket: %f\n",
-            blockNum, maxRecords, minRecords, averageRecords);
+    printf("Hash Statistics:\n\tTotal number of buckets: %d\n\tTotal number of records: %d\n\tMax records in a bucket: %d\n\tMin records in a bucket: %d\n\tAverage records in a bucket: %f\n",
+            blockNum, info->totalRecords, maxRecords, minRecords, averageRecords);
     return HT_OK;
 }
 
