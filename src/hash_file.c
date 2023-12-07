@@ -115,20 +115,32 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     
     int buckets = 1 << info->globalDepth;
     int dictBlocks;
-    int* hashTable;
     BF_GetBlockCounter(dictDesc,&dictBlocks);
+    int* hashTable = malloc(sizeof(int)*buckets);
     if(!dictBlocks) {
-        hashTable = malloc(sizeof(int)*buckets);
         for(int i = 0; i < buckets; i++) {
             hashTable[i] = -1;
         }
         info->hashTable = hashTable;
         return HT_OK;
     } else {
-        
+        BF_Block *block;
+        BF_Block_Init(&block);
+        int bucketsPerBlock = BF_BLOCK_SIZE / sizeof(int);
+        for(int i = 0; i < dictBlocks; i++) {
+            BF_GetBlock(dictDesc,i,block);
+            int* data = (int*)BF_Block_GetData(block);
+            if(buckets < BF_BLOCK_SIZE / 4) {
+                memcpy(&hashTable[i * bucketsPerBlock],data,buckets * 4);
+                // break;
+            } else {
+                memcpy(&hashTable[i * bucketsPerBlock],data,BF_BLOCK_SIZE);
+                buckets -= (int)BF_BLOCK_SIZE / 4;
+            }
+        }
+            info->hashTable = hashTable;
+        return HT_OK;
     }
-    // BF_Block *block;
-    // BF_Block_Init(&block);
 
 
 }
@@ -161,7 +173,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 
     // SAVE THE HASHTABLE.
     int dictDesc;
-    BF_OpenFile("dict.db", &dictDesc);
+    BF_OpenFile("dicttest1.db", &dictDesc);
     BF_Block* block2;
     BF_Block_Init(&block2);
     int dictBlocks;
@@ -199,13 +211,13 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     // printf("J is %d\n",j);
     // int* test = (int*)BF_Block_GetData(block2); //get the first block?
     // printf("Total slots are %d\n", finalSlots);
-    // for(int i = 0; i < 128; i++) {
-    //     printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
-    //     BF_GetBlock(fileDesc, test[i], block);
-    //     char* data = BF_Block_GetData(block);
-    //     HT_block_info* info = (HT_block_info*) data;
-    //     printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
-    // }
+    //     for(int i = 0; i < 128; i++) {
+    //         printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
+    //         BF_GetBlock(fileDesc, test[i], block);
+    //         char* data = BF_Block_GetData(block);
+    //         HT_block_info* info = (HT_block_info*) data;
+    //         printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
+    //     }
     // }
     BF_Block_Destroy(&block);
     BF_Block_Destroy(&block2);
