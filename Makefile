@@ -8,5 +8,4 @@ bf:
 	gcc -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/bf_main.c -lbf -o ./build/runner -O2
 
 run:
-	rm -f *.db
 	./build/ht_main

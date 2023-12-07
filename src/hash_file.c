@@ -60,6 +60,10 @@ HT_ErrorCode HT_Destroy() {
 HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
     int fileDesc;
     BF_ErrorCode exists = BF_CreateFile(filename);
+    // char* dictFileName;
+    char dictFile[sizeof(filename) + 5] = "dict";
+    strncat(dictFile,filename,sizeof(filename));
+    BF_CreateFile(dictFile);
     if(exists != BF_OK) return HT_ERROR;
     //Create ht_info
     BF_Block *block;
@@ -72,8 +76,6 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
     data->globalDepth = depth;
     data->totalRecords = 0;
     data->type = HASH;
-
-
     BF_Block_SetDirty(block);
     CALL_BF(BF_UnpinBlock(block));
 
@@ -86,6 +88,12 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 
 // Open the file with name = *fileName and insert in open files table. The position of the file is stored in indexDesc.
 HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
+    int dictDesc;
+    char dictFile[sizeof(fileName) + 5] = "dict";
+    strncat(dictFile,fileName,sizeof(fileName));
+    BF_OpenFile(dictFile,&dictDesc);
+
+
     if(openFileCounter == MAX_OPEN_FILES) {
         return HT_ERROR;
     }
@@ -99,19 +107,36 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
     int fileDesc;
     BF_ErrorCode code = BF_OpenFile(fileName,&fileDesc);
     if(code != BF_OK) return HT_ERROR;
-    HT_info *info = getInfo(*indexDesc);
     table[*indexDesc].fileDesc = fileDesc;
     table[*indexDesc].fileName = fileName;
+    HT_info *info = getInfo(*indexDesc);
 
     openFileCounter++;
-    return HT_OK;
+    
+    int buckets = 1 << info->globalDepth;
+    int dictBlocks;
+    int* hashTable;
+    BF_GetBlockCounter(dictDesc,&dictBlocks);
+    if(!dictBlocks) {
+        hashTable = malloc(sizeof(int)*buckets);
+        for(int i = 0; i < buckets; i++) {
+            hashTable[i] = -1;
+        }
+        info->hashTable = hashTable;
+        return HT_OK;
+    } else {
+        
+    }
+    // BF_Block *block;
+    // BF_Block_Init(&block);
+
+
 }
 
 HT_ErrorCode HT_CloseFile(int indexDesc) {
     BF_Block *block; 
     int fileDesc = table[indexDesc].fileDesc;
     BF_Block_Init(&block);
-    BF_AllocateBlock(fileDesc,block);
     
     
     BF_GetBlock(fileDesc,0,block);
@@ -136,7 +161,6 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 
     // SAVE THE HASHTABLE.
     int dictDesc;
-    BF_CreateFile("dict.db");
     BF_OpenFile("dict.db", &dictDesc);
     BF_Block* block2;
     BF_Block_Init(&block2);
@@ -147,10 +171,8 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     for(int blockPos = 0; blockPos < tableBlocks; blockPos++) {
         if(blockPos < dictBlocks) {
             BF_GetBlock(dictDesc, blockPos, block2);
-            printf("yo hello?\n");
         } else {
             BF_AllocateBlock(dictDesc, block2);
-            printf("wassup?\n");
 
         }
         // Now we have the block we want.
@@ -171,20 +193,20 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     //buckets se 2 blocks kai boreis na ta diavaseis an omws kratas san indexes apo 0 ews 128, den enonoume to hashtable se 1 opote den boreis na pas apo 128 ews 256,
     //an omws pareis to prwto block kaneis print ola ta buckets, meta to deftero kai kaneis print pali ola ta buckets, vgazei diaforeitka buckets kai mono ama diavaseis
     //apo afta ta 2 pairneis ontos apotelesmata kai oxi undefined behavior
-    BF_GetBlockCounter(dictDesc,&num);
-    for(int j = 0; j < num-1; j++) {
-    BF_GetBlock(dictDesc, j, block2);
-    printf("J is %d\n",j);
-    int* test = (int*)BF_Block_GetData(block2); //get the first block?
-    printf("Total slots are %d\n", finalSlots);
-    for(int i = 0; i < 128; i++) {
-        printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
-        BF_GetBlock(fileDesc, test[i], block);
-        char* data = BF_Block_GetData(block);
-        HT_block_info* info = (HT_block_info*) data;
-        printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
-    }
-    }
+    // BF_GetBlockCounter(dictDesc,&num);
+    // for(int j = 0; j < num-1; j++) {
+    // BF_GetBlock(dictDesc, j, block2);
+    // printf("J is %d\n",j);
+    // int* test = (int*)BF_Block_GetData(block2); //get the first block?
+    // printf("Total slots are %d\n", finalSlots);
+    // for(int i = 0; i < 128; i++) {
+    //     printf("this is slot %d and it has blockpos %d\n",i+1, test[i]);
+    //     BF_GetBlock(fileDesc, test[i], block);
+    //     char* data = BF_Block_GetData(block);
+    //     HT_block_info* info = (HT_block_info*) data;
+    //     printf("this is the info local depth %d and num of records %d \n", info->localDepth, info->numOfRecords);
+    // }
+    // }
     BF_Block_Destroy(&block);
     BF_Block_Destroy(&block2);
     CALL_BF(BF_CloseFile(fileDesc));  // eeeeeee kapou na epistrefw HT_ERROR!!!!!!
@@ -201,15 +223,8 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
     int *hashTable; //The table consists of integers representing the position of the block in the file.
     int depth = 1;
     depth <<= info->globalDepth; //memory allocated grows exponentially based on global depth
-    if(info->totalRecords == 0)  { //Init table
-        hashTable = malloc(sizeof(int) * (depth));
-        for(int i = 0; i < depth; i++) {
-            hashTable[i] = -1; // arnhtiko index isws
-        }
-        info->hashTable = hashTable;
-    } else { //if table already exists
-        hashTable = info->hashTable;
-    }
+    hashTable = info->hashTable;
+
 
     BF_Block *block;
     BF_Block_Init(&block);
