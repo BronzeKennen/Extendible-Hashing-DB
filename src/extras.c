@@ -97,15 +97,3 @@ void resizeHashTable(HT_info *info) {
 unsigned int getMSBs(unsigned int num, int depth) {
     return num >>= (sizeof(int)*8 - depth);
 }
-
-// Simple function that prints an integer using ones and zeros like binary. Pretty easy to overflow.
-int inBits(int decimal_num) {
-    int binary_num = 0, i = 1, remainder;
-    while (decimal_num != 0) {
-        remainder = decimal_num % 2;
-        decimal_num /= 2;
-        binary_num += remainder * i;
-        i *= 10;
-    }
-    return binary_num;
-}

@@ -9,8 +9,6 @@
 
 
 #define RECORDS_NUM 1000 // you can change it if you want
-#define GLOBAL_DEPTH 2 // you can change it if you want
-#define FILE_NAME "data.db"
 
 const char* names[] = {
   "Yannis",
@@ -118,7 +116,7 @@ void test_insert(void) {
 
     HT_info* info = getInfo(indexDesc);
     int recordsBefore = info->totalRecords;
-    int numOfRecords = 15; // Test number, you can change it if you want.
+    int numOfRecords = RECORDS_NUM; // Test number, you can change it if you want.
     for(int id = 0; id < numOfRecords; id++) {
 
       // Skip id = 5 on purpose to use in PrintAllEntries.
@@ -159,8 +157,8 @@ void test_printentries(void) {
     printf("\nThese are all the entries:\n");
     HT_PrintAllEntries(indexDesc, NULL);
 
-    // Print 3 random entries.
-    printf("\nThese are 3 random entries:\n");
+    // Print 3 entries.
+    printf("\nThese are 3 entries:\n");
     int rand = info->totalRecords / 2;
     HT_PrintAllEntries(indexDesc, &rand);
     rand = info->totalRecords / 3;
