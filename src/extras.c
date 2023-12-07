@@ -65,7 +65,6 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
 
 int hash_Function(int num) {
     long long num2 = num * 2318589953;
-    // printf("hashNum is %d\n", (int)num2);
     return (int)num2;
     //will create a real hashFunc
 }

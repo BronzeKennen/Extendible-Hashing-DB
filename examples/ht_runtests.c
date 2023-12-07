@@ -151,8 +151,11 @@ void test_printentries(void) {
     int indexDesc;
     HT_Init();
     HT_OpenIndex("test1.db",&indexDesc);
-    HT_info *info = getInfo(indexDesc);
-    
+    // HT_info *info = getInfo(indexDesc);
+    BF_Block *block;
+    BF_Block_Init(&block);
+    BF_GetBlock(indexDesc,0,block);
+    HT_info *info = (HT_info*)BF_Block_GetData(block);    
     // Print every entry.
     printf("\nThese are all the entries:\n");
     HT_PrintAllEntries(indexDesc, NULL);
@@ -169,8 +172,9 @@ void test_printentries(void) {
     // Search for ID = 5. Should not be found.
     rand = 5;
     printf("\nSearching for ID = 5:\n");
+    BF_UnpinBlock(block);
+    BF_Block_Destroy(&block);
     HT_PrintAllEntries(indexDesc, &rand);
-
     HT_CloseFile(indexDesc);
     HT_Destroy();
 }
@@ -186,6 +190,8 @@ void test_hashstatistics(void) {
 
     // File name doesn't exist or isn't open.
     TEST_ASSERT(HashStatistics("dx.db") != HT_OK);
+    HT_CloseFile(indexDesc);
+    HT_Destroy();
 }
 
 

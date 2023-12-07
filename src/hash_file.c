@@ -131,6 +131,7 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
             hashTable[i] = -1;
         }
         info->hashTable = hashTable; // Have the pointer of HT_Info point at the allocated memory
+        BF_CloseFile(dictDesc);
         return HT_OK;
     } else {
         BF_Block *block;
@@ -146,10 +147,14 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
                 memcpy(&hashTable[i * bucketsPerBlock],data,BF_BLOCK_SIZE);
                 buckets -= (int)BF_BLOCK_SIZE / 4; // Update remaing slots. 
             }
+            CALL_BF(BF_UnpinBlock(block));
         }
             info->hashTable = hashTable; // Have the pointer of HT_Info point at the allocated memory
+        BF_Block_Destroy(&block);
+        BF_CloseFile(dictDesc);
         return HT_OK;
     }
+    BF_CloseFile(dictDesc);
     return HT_ERROR;
 }
 
@@ -211,7 +216,6 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
         BF_UnpinBlock(block2);
     }
     // Free memory and close both files.
-    BF_Block_Destroy(&block);
     BF_Block_Destroy(&block2);
     CALL_BF(BF_CloseFile(table[indexDesc].fileDesc)); 
     CALL_BF(BF_CloseFile(dictDesc));
@@ -220,7 +224,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
     table[indexDesc].fileDesc = -1;  
     table[indexDesc].fileName = '\0';
     openFileCounter--;
-
+    BF_Block_Destroy(&block);
     return HT_OK;
 }
 
@@ -482,9 +486,8 @@ HT_info *getInfo(int indexDesc) {
     BF_GetBlock(fileDesc, 0, block);
 
     void* Pointer = BF_Block_GetData(block);
-
     HT_info* info = (HT_info*)Pointer;
-    
+
     BF_Block_Destroy(&block);
 
     return info;
