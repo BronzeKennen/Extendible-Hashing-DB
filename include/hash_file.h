@@ -1,6 +1,7 @@
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
 
+#define MAX_OPEN_FILES 20
 
 typedef enum HT_ErrorCode {
   HT_OK,
@@ -112,5 +113,6 @@ int hash_Function(int num);
 unsigned int getMSBs(unsigned int num, int depth);
 void resizeHashTable(HT_info *info);
 HT_info *getInfo(int indexDesc); 
+HT_ErrorCode HT_Destroy();
 
 #endif // HASH_FILE_H

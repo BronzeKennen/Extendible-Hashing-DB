@@ -42,11 +42,9 @@ void reHash(int fileDesc, int oldBlockPos, int newBlockPos, int *hashTable, int 
         hashNum = getMSBs(hashNum, globalDepth);
 
         if(hashTable[hashNum] == oldBlockPos) {
-            printf("Hashing in old block, depth is %d\n", oldInfo->localDepth);
             recOld[oldInfo->numOfRecords] = rec;
             oldInfo->numOfRecords++;
         } else if(hashTable[hashNum] == newBlockPos){
-            printf("Hashing in new block, depth is %d\n", newInfo->localDepth);
             recNew[newInfo->numOfRecords] = rec;
             newInfo->numOfRecords++;
         } else {
@@ -74,7 +72,6 @@ int hash_Function(int num) {
 
 
 void resizeHashTable(HT_info *info) {
-    printf("Resizing table...\n");
     int* hashTable = info->hashTable;
     // Set sizes for old and new table
     int oldIndexes = 2 << info->globalDepth - 1;
@@ -92,17 +89,16 @@ void resizeHashTable(HT_info *info) {
     }
     // Update HT_info. Need to check if it fits in one block.
     info->globalDepth++;
-    printf("Global depth is now %d\n",info->globalDepth);
     free(hashTable);
     info->hashTable = newHashTable;
-    printf("Hash table now has total space of %d buckets.\n",(1 << info->globalDepth));
 }
 
+// Gets [MAX_INT_DIGITS - depth] MSBs of a number.
 unsigned int getMSBs(unsigned int num, int depth) {
-    printf("The %d MSBs are %04d\n", depth, inBits(num >> (sizeof(int)*8 - depth)));
     return num >>= (sizeof(int)*8 - depth);
 }
 
+// Simple function that prints an integer using ones and zeros like binary. Pretty easy to overflow.
 int inBits(int decimal_num) {
     int binary_num = 0, i = 1, remainder;
     while (decimal_num != 0) {
